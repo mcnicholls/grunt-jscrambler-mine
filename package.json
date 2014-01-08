@@ -1,0 +1,33 @@
+{
+  "name": "grunt-jscrambler",
+  "description": "Obfuscate javascript files using jscrambler.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Michael Nicholls",
+    "email": "nicholls.mc@gmail.com"
+  },
+  "main": "Gruntfile.js",
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "devDependencies": {
+    "grunt-contrib-jshint": "~0.6.0",
+    "grunt-contrib-clean": "~0.4.0",
+    "grunt-contrib-nodeunit": "~0.2.0",
+    "grunt": "~0.4.1"
+  },
+  "peerDependencies": {
+    "grunt": "~0.4.1"
+  },
+  "keywords": [
+    "gruntplugin"
+  ],
+  "dependencies": {
+    "request": "~2.27.0",
+    "jszip": "~0.2.1",
+    "mkdirp": "~0.3.5"
+  }
+}
