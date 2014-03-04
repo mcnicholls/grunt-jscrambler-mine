@@ -21,6 +21,10 @@ module.exports = function(grunt) {
         JSZip = require('jszip'),
         mkdirp = require('mkdirp');
 
+    var JSCRAMBLER_PROTO = 'https://',
+        JSCRAMBLER_HOST = 'api.jscrambler.com',
+        JSCRAMBLER_VERSION = 'v3';
+
     var options,
         done,
         file_paths = {},
@@ -57,9 +61,11 @@ module.exports = function(grunt) {
         i;
 
     grunt.log.writeln('Project ' + upResponse.id + ' created');
-    setTimeout( function () {
+    pollProject( upResponse.id, 1000, function () {
         downloadProject( upResponse.id, options, downloadCallback);
-    }, 15000);
+    }, function () {
+        grunt.log.writeln('Project ' + upResponse.id + ' errored with the following message: ');
+    });
   }
 
   function downloadCallback ( id, body ) {
@@ -120,66 +126,51 @@ module.exports = function(grunt) {
     }
   }
 
+  function pollProject( project_id, interval, success, error) {
+    jscrambler_request('/code.json', 'GET', options.keys, null,
+        function(response) {
+            pollSuccess(response, project_id, interval, success, error);
+        }, pollError
+    );
+  }
+
+  function pollSuccess(response, project_id, interval, success, error) {
+    var queue = JSON.parse(response),
+        i,
+        length;
+
+    function poll() {
+        pollProject(project_id, interval, success, error);
+    }
+
+    if(queue) {
+        length = queue.length;
+        for(i = 0; i < length; ++i) {
+            if(queue[i].id === project_id) {
+                if(!queue[i].error_message || queue[i].error_message === 'OK') {
+                    if(queue[i].finished_at) {
+                        success();
+                    }
+                    else {
+                        setTimeout(poll, interval);
+                    }
+                }
+                else {
+                    error(queue.error_message);
+                }
+                return;
+            }
+        }
+    }
+  }
+
+  function pollError(error) {
+    grunt.log.writeln(error);
+    done();
+  }
 
   function uploadCode ( file_paths, options, callback ) {
-    var query_params = [],
-        form,
-        signature_data,
-        signature,
-        query_string = '',
-        prop_names = [],
-        timestamp,
-        hmac,
-        setting,
-        r,
-        i;
-
-    timestamp = new Date().toISOString();
-    query_params['access_key'] = options.keys.access_key;
-
-    // Iterate over all specified file groups.
-    r = request.post('https://api.jscrambler.com/v3/code.json', function ( error, response , body) {
-        callback(body);
-    });
-
-    form = r.form();
-    form.append('access_key', options.keys.access_key);
-    form.append('timestamp', timestamp);
-    file_paths = file_paths.sort();
-    for ( i = 0; i < file_paths.length; ++i ) {
-        var md5 = crypto.createHash('md5'),
-            filepath = file_paths[i],
-            basename = 'file_' + i;
-
-        md5.update(fs.readFileSync(filepath));
-        query_params[basename] = md5.digest('hex');
-        form.append(basename, fs.createReadStream(filepath));
-    }
-    query_params['timestamp'] = timestamp;
-
-    for( setting in options ) {
-        if ( options.hasOwnProperty(setting) && setting !== 'keys') {
-            form.append(setting, options[setting]);
-            query_params[setting] = options[setting];
-        }
-    }
-
-    for( setting in query_params ) {
-        if ( query_params.hasOwnProperty(setting) ) {
-            prop_names.push(setting);
-        }
-    }
-    prop_names.sort();
-
-    query_string = encodeParams(prop_names, query_params);
-
-    signature_data = 'POST;api.jscrambler.com;/code.json;' + query_string;
-    hmac = crypto.createHmac('sha256', options.keys.secret_key);
-    hmac.update(signature_data);
-    signature = hmac.digest('base64');
-
-    form.append('signature', signature);
-
+    jscrambler_request('/code.json', 'POST', options.keys, file_paths, callback);
   }
 
   function downloadProject( project_id, options, callback ) {
@@ -323,6 +314,93 @@ module.exports = function(grunt) {
     r = request.del(r_opts, function ( error, response , body) {
         callback(body);
     });
+  }
+
+  function jscrambler_request(resource, method, keys, files, onSuccess, onError) {
+    var query_params = [],
+        form = null,
+        signature_data,
+        signature,
+        query_string = '',
+        prop_names = [],
+        timestamp,
+        hmac,
+        setting,
+        url = JSCRAMBLER_PROTO + JSCRAMBLER_HOST + '/' + JSCRAMBLER_VERSION + resource,
+        r,
+        i,
+        length,
+        request_opts = {
+            url: url,
+            method: method,
+            encoding: null
+        };
+
+    function cb( error, response , body) {
+        if(error) {
+            onError(error);
+        }
+        else {
+            onSuccess(body);
+        }
+    }
+
+    timestamp = new Date().toISOString();
+    query_params['access_key'] = keys.access_key;
+    query_params['timestamp'] = timestamp;
+
+    if(method === 'POST') {
+        r = request(request_opts, cb);
+        form = r.form();
+        form.append('access_key', keys.access_key);
+        form.append('timestamp', timestamp);
+        if(files) {
+            files = files.sort();
+            length = files.length;
+            for ( i = 0; i < length; ++i ) {
+                var md5 = crypto.createHash('md5'),
+                    filepath = files[i],
+                    basename = 'file_' + i;
+
+                md5.update(fs.readFileSync(filepath));
+                query_params[basename] = md5.digest('hex');
+                form.append(basename, fs.createReadStream(filepath));
+            }
+        }
+    }
+
+    for( setting in options ) {
+        if ( options.hasOwnProperty(setting) && setting !== 'keys') {
+            if(form) {
+                form.append(setting, options[setting]);
+            }
+            query_params[setting] = options[setting];
+        }
+    }
+
+    for( setting in query_params ) {
+        if ( query_params.hasOwnProperty(setting) ) {
+            prop_names.push(setting);
+        }
+    }
+    prop_names.sort();
+
+    query_string = encodeParams(prop_names, query_params);
+
+    signature_data = method + ';' + JSCRAMBLER_HOST + ';' + resource + ';' + query_string;
+    hmac = crypto.createHmac('sha256', keys.secret_key);
+    hmac.update(signature_data);
+    signature = hmac.digest('base64');
+
+    if(form) {
+        form.append('signature', signature);
+    }
+
+    if(!r) {
+        query_params['signature'] = signature;
+        request_opts.qs = query_params;
+        r = request(request_opts, cb);
+    }
   }
 
   function encodeParams ( keyNames, params ) {
