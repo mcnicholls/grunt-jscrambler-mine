@@ -21,12 +21,15 @@ module.exports = function(grunt) {
         JSZip = require('jszip'),
         mkdirp = require('mkdirp');
 
-  grunt.registerMultiTask('jscrambler', 'Obfuscate Javascript via the jscrambler web API.', function() {
-    // Merge task-specific and/or target-specific options with these defaults.
-    var options = this.options({ }),
-        done = this.async(),
+    var options,
+        done,
         file_paths = {},
         src_files = [];
+
+  grunt.registerMultiTask('jscrambler', 'Obfuscate Javascript via the jscrambler web API.', function() {
+    // Merge task-specific and/or target-specific options with these defaults.
+    options = this.options({ });
+    done = this.async();
 
     parseOptions(options);
 
@@ -46,29 +49,34 @@ module.exports = function(grunt) {
       });
     });
 
-    uploadCode( src_files, options, function ( body ) {
-        var upResponse = JSON.parse(body),
-            i;
-
-        grunt.log.writeln('Project ' + upResponse.id + ' created');
-        setTimeout( function () {
-            var downloadCallback = function ( body ) {
-                    unzipFiles(body, file_paths);
-                    deleteProject( upResponse.id, options, function ( body ) {
-                        var delResponse = JSON.parse(body);
-                        if ( delResponse.deleted ) {
-                            grunt.log.writeln('Project ' + delResponse.id + ' was deleted');
-                        }
-                        else {
-                            grunt.log.writeln('Project ' + delResponse.id + ' was not deleted');
-                        }
-                        done();
-                    });
-                };
-            downloadProject( upResponse.id, options, downloadCallback);
-        }, 15000);
-    });
+    uploadCode(src_files, options, uploadCallback);
   });
+
+  function uploadCallback( body ) {
+    var upResponse = JSON.parse(body),
+        i;
+
+    grunt.log.writeln('Project ' + upResponse.id + ' created');
+    setTimeout( function () {
+        downloadProject( upResponse.id, options, downloadCallback);
+    }, 15000);
+  }
+
+  function downloadCallback ( id, body ) {
+    unzipFiles(body, file_paths);
+    deleteProject( id, options, deleteCallback );
+  }
+
+  function deleteCallback( body ) {
+    var delResponse = JSON.parse(body);
+    if ( delResponse.deleted ) {
+        grunt.log.writeln('Project ' + delResponse.id + ' was deleted');
+    }
+    else {
+        grunt.log.writeln('Project ' + delResponse.id + ' was not deleted');
+    }
+    done();
+  }
 
   function parseOptions(options) {
     if(options.function_outlining) {
@@ -218,7 +226,7 @@ module.exports = function(grunt) {
     };
 
     r = request.get(r_opts, function ( error, response , body) {
-        callback(body);
+        callback(project_id, body);
     });
   }
   function downloadSource( project_id, source, options, callback ) {
