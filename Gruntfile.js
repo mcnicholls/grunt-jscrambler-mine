@@ -33,7 +33,28 @@ module.exports = function(grunt) {
       default_options: {
         options: {
           keys: grunt.file.readJSON('jscrambler_key.json'),
-          name_prefix: 'npxnc'
+          asserts_elimination: 'loadTasks',
+          constant_folding: true,
+          dead_code: true,
+          dead_code_elimination: true,
+          debugging_code_elimination: 'loadNpmTasks',
+          dictionary_compression: true,
+          domain_lock: 'github.com',
+          dot_notation_elimination: true,
+          exceptions_list: 'module',
+          expiration_date: '2099/12/18',
+          function_outlining: true,
+          function_reorder: true,
+          ignore_files: 'scripts/jquery.min.js',
+          literal_hooking: '1;2;.3',
+          literal_duplicates: true,
+          member_enumeration: true,
+          mode: 'starter',
+          name_prefix: 'abc',
+          // rename_all: true,
+          rename_local: true,
+          string_splitting: '0.2',
+          whitespace: true,
         },
         files: [
           {

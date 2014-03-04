@@ -23,26 +23,15 @@ module.exports = function(grunt) {
 
   grunt.registerMultiTask('jscrambler', 'Obfuscate Javascript via the jscrambler web API.', function() {
     // Merge task-specific and/or target-specific options with these defaults.
-    var options = this.options({
-        expiration_date: '2199/01/01',
-        rename_local: '%DEFAULT%',
-        member_enumeration: '%DEFAULT%',
-        literal_hooking: '1;2;.3',
-        literal_duplicates: '%DEFAULT%',
-        function_outlining: '%DEFAULT%',
-        function_reorder: '%DEFAULT%',
-        name_prefix: '',
-        whitespace: '%DEFAULT%',
-        dot_notation_elimination: '%DEFAULT%',
-        mode: 'starter'
-    }),
+    var options = this.options({ }),
         done = this.async(),
         file_paths = {},
         src_files = [];
 
+    parseOptions(options);
+
     // Iterate over all specified file groups.
     this.files.forEach(function(f) {
-      // Concat specified files.
         f.src.filter(function(filepath) {
         // Warn on and remove invalid source files (if nonull was set).
         if (!grunt.file.exists(filepath)) {
@@ -80,6 +69,49 @@ module.exports = function(grunt) {
         }, 15000);
     });
   });
+
+  function parseOptions(options) {
+    if(options.function_outlining) {
+        options.function_outlining = '%DEFAULT%';
+    }
+    if(options.constant_folding) {
+        options.constant_folding = '%DEFAULT%';
+    }
+    if(options.dead_code) {
+        options.dead_code = '%DEFAULT%';
+    }
+    if(options.dead_code_elimination) {
+        options.dead_code_elimination = '%DEFAULT%';
+    }
+    if(options.dictionary_compression) {
+        options.dictionary_compression = '%DEFAULT%';
+    }
+    if(options.dot_notation_elimination) {
+        options.dot_notation_elimination = '%DEFAULT%';
+    }
+    if(options.function_outlining) {
+        options.function_outlining = '%DEFAULT%';
+    }
+    if(options.function_reorder) {
+        options.function_reorder = '%DEFAULT%';
+    }
+    if(options.literal_duplicates) {
+        options.literal_duplicates = '%DEFAULT%';
+    }
+    if(options.member_enumeration) {
+        options.member_enumeration = '%DEFAULT%';
+    }
+    if(options.rename_all) {
+        options.rename_all = '%DEFAULT%';
+    }
+    if(options.rename_local) {
+        options.rename_local = '%DEFAULT%';
+    }
+    if(options.whitespace) {
+        options.whitespace = '%DEFAULT%';
+    }
+  }
+
 
   function uploadCode ( file_paths, options, callback ) {
     var query_params = [],
