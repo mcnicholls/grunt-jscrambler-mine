@@ -32,7 +32,10 @@ module.exports = function(grunt) {
 
   grunt.registerMultiTask('jscrambler', 'Obfuscate Javascript via the jscrambler web API.', function() {
     // Merge task-specific and/or target-specific options with these defaults.
-    options = this.options({ });
+    options = this.options({
+        deleteProject: false,
+        pollingInterval: 1000
+    });
     done = this.async();
 
     parseOptions(options);
@@ -61,7 +64,7 @@ module.exports = function(grunt) {
         i;
 
     grunt.log.writeln('Project ' + upResponse.id + ' created');
-    pollProject( upResponse.id, 1000, function () {
+    pollProject( upResponse.id, options.pollingInterval, function () {
         downloadProject( upResponse.id, options, function(body) {
             downloadCallback(upResponse.id, body);
         });
@@ -72,7 +75,12 @@ module.exports = function(grunt) {
 
   function downloadCallback ( id, body ) {
     unzipFiles(body, file_paths);
-    deleteProject( id, options, deleteCallback );
+    if(options.deleteProject) {
+        deleteProject( id, options, deleteCallback );
+    }
+    else {
+        done();
+    }
   }
 
   function deleteCallback( body ) {
@@ -237,7 +245,10 @@ module.exports = function(grunt) {
     }
 
     for( setting in options ) {
-        if ( options.hasOwnProperty(setting) && setting !== 'keys') {
+        if ( options.hasOwnProperty(setting) &&
+            setting !== 'keys' &&
+            setting !== 'deleteProject' &&
+            setting !== 'pollingInterval') {
             if(form) {
                 form.append(setting, options[setting]);
             }

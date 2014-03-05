@@ -33,6 +33,7 @@ module.exports = function(grunt) {
       default_options: {
         options: {
           keys: grunt.file.readJSON('jscrambler_key.json'),
+          deleteProject: true,
           asserts_elimination: 'loadTasks',
           constant_folding: true,
           dead_code: true,
