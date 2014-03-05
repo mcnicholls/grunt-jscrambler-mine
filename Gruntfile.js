@@ -52,7 +52,6 @@ module.exports = function(grunt) {
           member_enumeration: true,
           mode: 'starter',
           name_prefix: 'abc',
-          // rename_all: true,
           rename_local: true,
           string_splitting: '0.2',
           whitespace: true,
