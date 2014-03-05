@@ -1,10 +1,18 @@
 {
   "name": "grunt-jscrambler",
   "description": "Obfuscate javascript files using jscrambler.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Michael Nicholls",
     "email": "nicholls.mc@gmail.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mcnicholls/grunt-jscrambler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mcnicholls/grunt-jscrambler/issues"
   },
   "main": "Gruntfile.js",
   "engines": {
