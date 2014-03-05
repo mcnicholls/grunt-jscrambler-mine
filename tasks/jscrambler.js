@@ -62,7 +62,9 @@ module.exports = function(grunt) {
 
     grunt.log.writeln('Project ' + upResponse.id + ' created');
     pollProject( upResponse.id, 1000, function () {
-        downloadProject( upResponse.id, options, downloadCallback);
+        downloadProject( upResponse.id, options, function(body) {
+            downloadCallback(upResponse.id, body);
+        });
     }, function () {
         grunt.log.writeln('Project ' + upResponse.id + ' errored with the following message: ');
     });
@@ -130,7 +132,7 @@ module.exports = function(grunt) {
     jscrambler_request('/code.json', 'GET', options.keys, null,
         function(response) {
             pollSuccess(response, project_id, interval, success, error);
-        }, pollError
+        }, onError
     );
   }
 
@@ -164,156 +166,21 @@ module.exports = function(grunt) {
     }
   }
 
-  function pollError(error) {
+  function onError(error) {
     grunt.log.writeln(error);
     done();
   }
 
   function uploadCode ( file_paths, options, callback ) {
-    jscrambler_request('/code.json', 'POST', options.keys, file_paths, callback);
+    jscrambler_request('/code.json', 'POST', options.keys, file_paths, callback, onError);
   }
 
   function downloadProject( project_id, options, callback ) {
-
-    var query_params = [],
-        resource = '/code/' + project_id + '.zip',
-        signature_data,
-        signature,
-        query_string = '',
-        prop_names = [],
-        timestamp,
-        hmac,
-        setting,
-        r,
-        r_opts,
-        i;
-
-    timestamp = new Date().toISOString();
-    query_params['access_key'] = options.keys.access_key;
-    query_params['timestamp'] = timestamp;
-
-    // Iterate over all specified file groups.
-
-    for( setting in query_params ) {
-        if ( query_params.hasOwnProperty(setting) ) {
-            prop_names.push(setting);
-        }
-    }
-    prop_names.sort();
-
-    query_string = encodeParams(prop_names, query_params);
-
-    signature_data = 'GET;api.jscrambler.com;' + resource + ';' + query_string;
-    hmac = crypto.createHmac('sha256', options.keys.secret_key);
-    hmac.update(signature_data);
-    signature = hmac.digest('base64');
-
-    query_params['signature'] = signature;
-
-    r_opts = {
-        url: 'https://api.jscrambler.com/v3' + resource,
-        qs: query_params,
-        encoding: null
-    };
-
-    r = request.get(r_opts, function ( error, response , body) {
-        callback(project_id, body);
-    });
-  }
-  function downloadSource( project_id, source, options, callback ) {
-
-    var query_params = [],
-        resource = '/code/' + project_id + '/' + source.id + '.' + source.extension,
-        signature_data,
-        signature,
-        query_string = '',
-        prop_names = [],
-        timestamp,
-        hmac,
-        setting,
-        r,
-        r_opts,
-        i;
-
-    timestamp = new Date().toISOString();
-    query_params['access_key'] = options.keys.access_key;
-    query_params['timestamp'] = timestamp;
-
-    // Iterate over all specified file groups.
-
-    for( setting in query_params ) {
-        if ( query_params.hasOwnProperty(setting) ) {
-            prop_names.push(setting);
-        }
-    }
-    prop_names.sort();
-
-    query_string = encodeParams(prop_names, query_params);
-
-    signature_data = 'GET;api.jscrambler.com;' + resource + ';' + query_string;
-    hmac = crypto.createHmac('sha256', options.keys.secret_key);
-    hmac.update(signature_data);
-    signature = hmac.digest('base64');
-
-    query_params['signature'] = signature;
-
-    r_opts = {
-        url: 'https://api.jscrambler.com/v3' + resource,
-        qs: query_params
-    };
-
-    r = request.get(r_opts, function ( error, response , body) {
-        callback(body);
-    });
+    jscrambler_request('/code/' + project_id + '.zip', 'GET', options.keys, null, callback, onError);
   }
 
   function deleteProject( project_id, options, callback ) {
-
-    var query_params = [],
-        resource,
-        signature_data,
-        signature,
-        query_string = '',
-        prop_names = [],
-        timestamp,
-        hmac,
-        setting,
-        r,
-        r_opts,
-        i;
-
-    resource = '/code/' + project_id + '.zip';
-
-    timestamp = new Date().toISOString();
-    query_params['access_key'] = options.keys.access_key;
-    query_params['timestamp'] = timestamp;
-
-    // Iterate over all specified file groups.
-
-    for( setting in query_params ) {
-        if ( query_params.hasOwnProperty(setting) ) {
-            prop_names.push(setting);
-        }
-    }
-    prop_names.sort();
-
-    query_string = encodeParams(prop_names, query_params);
-
-    signature_data = 'DELETE;api.jscrambler.com;' + resource + ';' + query_string;
-    hmac = crypto.createHmac('sha256', options.keys.secret_key);
-    hmac.update(signature_data);
-    signature = hmac.digest('base64');
-
-    query_params['signature'] = signature;
-
-    r_opts = {
-        url: 'https://api.jscrambler.com/v3' + resource,
-        qs: query_params
-    };
-
-    r = request.del(r_opts, function ( error, response , body) {
-        callback(body);
-    });
+    jscrambler_request('/code/' + project_id + '.zip', 'DELETE', options.keys, null, callback, onError);
   }
 
   function jscrambler_request(resource, method, keys, files, onSuccess, onError) {
